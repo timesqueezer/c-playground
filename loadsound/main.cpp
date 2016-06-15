@@ -8,7 +8,7 @@
 
 #define PI           3.14159265358979323846  /* pi */
 
-sf::Uint16 RES_X = 1920;
+sf::Uint16 RES_X = 2050;
 sf::Uint16 RES_Y = 1080;
 
 class CoordinateSystem : public sf::Drawable {
@@ -184,7 +184,7 @@ void FFTView::calc() {
     //int full_16 = 1 << 16;
 
     int N = mBuffer->getSampleCount();
-    int max_freq = mBuffer->getSampleRate() / 2;
+    int max_freq = 20000;//mBuffer->getSampleRate() / 2;
     double mag[max_freq];
     //double phase[max_freq];
 
@@ -198,17 +198,20 @@ void FFTView::calc() {
             real += (samples[n*2] * cos(2*PI*k*n/N));
             imag += (samples[n*2] * sin(2*PI*k*n/N));
         }
-        mag[k] = sqrt((real*real)+(imag*imag)) / (half_16*mFFTSize);
+        mag[k] = 2 * sqrt((real*real)+(imag*imag)) / (half_16*mFFTSize);
         //phase[k] =
     }
 
     printf("FFT done after: %ims\n", clock.restart().asMilliseconds());
 
     // scale logarithmically
-    /*for (int i=0;i<max_freq;++i) {
+    int base = 2;
+    for (int i=0;i<max_freq;++i) {
         //mag[i] = exp(mag[i])-1;
-        mag[i] = pow(30.0, mag[i])-1;
-    }*/
+        //mag[i] = pow(30.0, mag[i])-1;
+        //mag[i] = (pow(base,mag[i])-1)/(base-1);
+        mag[i] = log10( (9 * mag[i]) + 1);
+    }
 
     /*
     double max = 0;
@@ -220,7 +223,7 @@ void FFTView::calc() {
     printf("MAX MAG: %f\n", max);*/
 
     // Generating bar graph
-    int num_bars = mWidth;
+    int num_bars = 1000;
     int padding = 0;
     int bar_width = (double)(mWidth / (num_bars + (padding * num_bars) ) );
     int k_width = (int)round((double)max_freq / num_bars);
@@ -236,8 +239,9 @@ void FFTView::calc() {
         int bar_height = (int)round(average * mHeight);
         sf::RectangleShape bar(sf::Vector2f(bar_width, bar_height));
         bar.setPosition(sf::Vector2f(i*(bar_width + padding), mHeight - bar_height));
-        bar.setFillColor(sf::Color(200, 220*(1/average), 255*(1/average), 255));
-        if ((i * k_width) % 500 < 10) {
+        bar.setFillColor(sf::Color(200, 220, 255, 255));
+        //bar.setFillColor(sf::Color(200, 220*(1/average), 255*(1/average), 255));
+        if ((i * k_width) % 1000 == 0) {
             bar.setFillColor(sf::Color(255, 0, 255, 255));
         }
         mBars.push_back(bar);
@@ -263,8 +267,9 @@ int main(int argc, char *argv[])
         printf("Error loading file.\n"  );
     }
 
-    FFTView fft(1024, &buffer, RES_X - 50, RES_Y - 50);
+    FFTView fft(4096, &buffer, RES_X - 50, RES_Y - 50);
     fft.calc();
+    WAVView wav(buffer, RES_X - 50, RES_Y - 50);
     CoordinateSystem cSystem(buffer.getSampleRate() / 2, 1.0, RES_X, RES_Y);
 
     sf::ContextSettings settings;
@@ -310,6 +315,7 @@ int main(int argc, char *argv[])
         texture.clear();
 
         texture.draw(fft);
+        //texture.draw(wav);
         texture.display();
 
         sf::Sprite inner(texture.getTexture());
