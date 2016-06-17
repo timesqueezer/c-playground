@@ -45,11 +45,28 @@ CoordinateSystem::CoordinateSystem(double x_scale, double y_scale, int width, in
     mXAxis.setPosition(sf::Vector2f(border_width, height - border_width - line_width));
     mXAxis.setFillColor(color);
 
-    int num_x_steps = x_scale / step_x_size;
-    int step_x_spacing = (width - 50) / num_x_steps;
-    for (int i = 0; i < num_x_steps; ++i) {
+    // x-axis segments
+
+    // Log scaling f(x, width) = 20 * 10^3(x / width)
+    // Reverse:    x(f, width) = (max / 3)*math.log10(f / 20)
+    int frequency_positions[10] = {20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000};
+    int segment_positions[10];
+
+    for (int i = 0; i < 10; ++i) {
+        // x(frequency_positions[i], mWidth)
+        segment_positions[i] = (int) ((double)(mWidth - border_width) / 3) * log10((double)frequency_positions[i] / 20);
+        segment_positions[i] += border_width;
+    }
+
+    // Linear scaling
+    /*for (int i = 0; i < 10; ++i) {
+        int segment_positions[i] = border_width + (i * mWidth / 10)
+    }*/
+
+    // Set-up Shapes etc.
+    for (int i = 0; i < 10; ++i) {
         sf::RectangleShape segment(sf::Vector2f(line_width, 5));
-        segment.setPosition(sf::Vector2f(border_width + (i * step_x_spacing), height - border_width));
+        segment.setPosition(sf::Vector2f(segment_positions[i], height - border_width));
         segment.setFillColor(color);
         mStepSegments.push_back(segment);
 
@@ -57,9 +74,10 @@ CoordinateSystem::CoordinateSystem(double x_scale, double y_scale, int width, in
         label.setFont(mFont);
         label.setCharacterSize(font_size);
         label.setColor(color);
-        label.setPosition(sf::Vector2f(border_width + (i * step_x_spacing) + (font_size / 2), height - border_width + 10));
+        label.setPosition(sf::Vector2f(segment_positions[i] + (font_size / 2), height - border_width + 10));
         label.setRotation(80);
-        int value = (int)(i * step_x_size);
+        //int value = (int)(i * 1000);
+        int value = frequency_positions[i];
         if (value >= 10000) {
             label.setString(std::to_string(value/1000) + 'k');
         } else {
@@ -67,6 +85,7 @@ CoordinateSystem::CoordinateSystem(double x_scale, double y_scale, int width, in
         }
         mLabels.push_back(label);
     }
+
 
     mYAxis = sf::RectangleShape(sf::Vector2f(line_width, height - border_width));
     mYAxis.setPosition(sf::Vector2f(border_width, 0));
@@ -267,8 +286,8 @@ int main(int argc, char *argv[])
         printf("Error loading file.\n"  );
     }
 
-    FFTView fft(4096, &buffer, RES_X - 50, RES_Y - 50);
-    fft.calc();
+    //FFTView fft(4096, &buffer, RES_X - 50, RES_Y - 50);
+    //fft.calc();
     WAVView wav(buffer, RES_X - 50, RES_Y - 50);
     CoordinateSystem cSystem(buffer.getSampleRate() / 2, 1.0, RES_X, RES_Y);
 
@@ -314,7 +333,7 @@ int main(int argc, char *argv[])
         window.clear();
         texture.clear();
 
-        texture.draw(fft);
+        //texture.draw(fft);
         //texture.draw(wav);
         texture.display();
 
