@@ -17,8 +17,6 @@
 sf::Uint16 RES_X = 2050;
 sf::Uint16 RES_Y = 1080;
 
-using Utils::log10scale;
-
 class FFTView : public sf::Drawable {
 private:
     int mFFTSize, mWidth, mHeight;
