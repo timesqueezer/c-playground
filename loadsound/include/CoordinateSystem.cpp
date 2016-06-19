@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include <cmath>
 
 #include "CoordinateSystem.hpp"
 
@@ -62,7 +63,6 @@ CoordinateSystem::CoordinateSystem(double x_scale, double y_scale, int width, in
         }
         mLabels.push_back(label);
     }
-
 
     mYAxis = sf::RectangleShape(sf::Vector2f(line_width, height - border_width));
     mYAxis.setPosition(sf::Vector2f(border_width, 0));

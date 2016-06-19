@@ -10,11 +10,14 @@
 #include "lol/fft.hpp"
 #include "include/CoordinateSystem.hpp"
 #include "include/WavView.hpp"
+#include "include/Utils.hpp"
 
 #define PI           3.14159265358979323846  /* pi */
 
 sf::Uint16 RES_X = 2050;
 sf::Uint16 RES_Y = 1080;
+
+using Utils::log10scale;
 
 class FFTView : public sf::Drawable {
 private:
@@ -102,13 +105,13 @@ std::vector<std::complex<double>> FFT(std::vector<std::complex<double>> &samples
 }
 
 void FFTView::calc() {
-    const sf::Int16* smpls = mBuffer->getSamples();
+    const sf::Int16* samples = mBuffer->getSamples();
     //double samples[] = {0, 0.77, 1, 0.77, 0, -0.77, -1, 0.77};
 
-    std::vector<sf::Int16> samples(&smpls[0], &smpls[79999]);
+    //std::vector<sf::Int16> samples(&smpls[0], &smpls[79999]);
 
-    //int N = mBuffer->getSampleCount();
-    int N = 80000;
+    int N = mBuffer->getSampleCount();
+    //int N = 80000;
     int max_freq = 20000;//mBuffer->getSampleRate() / 2;
     double mag[max_freq];
 
@@ -121,16 +124,17 @@ void FFTView::calc() {
     sf::Clock clock;
     clock.restart();
 
-    std::vector<double> inputreal(N/2, 0);
+    /*std::vector<double> inputreal(N/2, 0);
     for (int i = 0; i < N/2; ++i) {
         inputreal[i] = (double)samples[i*2];
     }
 
     std::vector<double> freqbins(inputreal);
     std::vector<double> actualoutimag(N/2, 0);
-    Fft::transform(freqbins, actualoutimag);
+    Fft::transform(freqbins, actualoutimag);*/
 
-    /******** DFT
+    int half_16 = (1 << 8) / 2;
+
     for (int k = 0; k < max_freq; ++k) {
         double real = 0;
         double imag = 0;
@@ -140,8 +144,7 @@ void FFTView::calc() {
         }
         mag[k] = 2 * sqrt((real*real)+(imag*imag)) / (half_16*mFFTSize);
         //phase[k] =
-    }*/
-
+    }
     //std::vector<std::complex<double>> freqbins = FFT(csamples);
 
     printf("FFT done after: %ims\n", clock.restart().asMilliseconds());
@@ -150,10 +153,9 @@ void FFTView::calc() {
     // scale logarithmically
     //int base = 2;
     for (int i=0;i<max_freq;++i) {
-        mag[i] = sqrt( pow(freqbins[i] / N, 2) + pow(actualoutimag[i] / N, 2) );
-        //mag[i] = exp(mag[i])-1;
-        //mag[i] = pow(30.0, mag[i])-1;
-        //mag[i] = (pow(base,mag[i])-1)/(base-1);
+        // abs(x)
+        //mag[i] = sqrt( pow(freqbins[i] / N, 2) + pow(actualoutimag[i] / N, 2) );
+
         mag[i] = log10( (9 * mag[i]) + 1);
     }
 
@@ -171,31 +173,37 @@ void FFTView::calc() {
     // Generating bar graph
     int num_bars = mWidth;
     int padding = 0;
-    int bar_width = (double)(mWidth / (num_bars + (padding * num_bars) ) );
-    //printf("k_width: %i, you lost %i\n", k_width, max_freq%num_bars);
 
     for (int i = 0; i < num_bars; ++i) {
-        int k_width = (int)round((double)(max_freq/3)*log10(i));
-        int actual_bar_width = (int)round((double)(mWidth / 3)*log10(i*bar_width/20));
+        // Frequency-width
+        int k_start = log10scale<int>(i, 0, num_bars);
+        int k_end = log10scale<int>(i+1, 0, num_bars);
+        int k_width = k_end - k_start;
+        // Bar width in px
+        int actual_bar_start = log10scale<int>(i, 0, mWidth);
+        int actual_bar_end = log10scale<int>(i+1, 0, mWidth);
+        int actual_bar_width = actual_bar_end - actual_bar_start;
+
+        if (k_width < 1) {
+            printf("FUCK\n");
+        }
 
         double average = 0;
-        for (int k = 0; k < k_width; ++k) {
-            average += mag[k + (i * k_width)];
+        for (int k = k_start; k <= k_end; ++k) {
+            average += mag[k];
         }
         average = average / k_width;
 
         int bar_height = (int)round(average * mHeight / max);
-        int new_width = (int)round( mWidth*3/ (2 * pow(i, 3/2)) );
-        //int new_x = (int)round( new_width * sqrt(i) );
-        int new_x = (2*new_width/3) * pow(i, 3/2);
-        sf::RectangleShape bar(sf::Vector2f(new_width, bar_height));
-        bar.setPosition(sf::Vector2f(new_x, mHeight - bar_height));
+
+        sf::RectangleShape bar(sf::Vector2f(actual_bar_width, bar_height));
+        bar.setPosition(sf::Vector2f(actual_bar_start, mHeight - bar_height));
         bar.setFillColor(sf::Color(200, 220, 255, 255));
         //bar.setFillColor(sf::Color(200, 220*(1/average), 255*(1/average), 255));
-        if ((i * k_width) % 1000 == 0) {
+        if (1000 - (k_start / (k_start / 1000)) < (k_width/2) ) {
             bar.setFillColor(sf::Color(255, 0, 128, 255));
         }
-        if (new_width > 3) {
+        if (actual_bar_width > 10) {
             bar.setOutlineThickness(-1);
             bar.setOutlineColor(sf::Color::Black);
         }
@@ -219,12 +227,11 @@ int main(int argc, char *argv[])
 
     sf::SoundBuffer buffer;
     if (!buffer.loadFromFile(argv[1])) {
-        printf("Error loading file.\n"  );
+        printf("Error loading file.\n");
     }
 
-    FFTView fft(4096, &buffer, RES_X - 50, RES_Y - 50);
-    fft.calc();
-    WAVView wav(buffer, RES_X - 50, RES_Y - 50);
+    FFTView fft(512, &buffer, RES_X - 50, RES_Y - 50);
+    //WAVView wav(buffer, RES_X - 50, RES_Y - 50);
     CoordinateSystem cSystem(buffer.getSampleRate() / 2, 1.0, RES_X, RES_Y);
 
     sf::ContextSettings settings;
@@ -245,6 +252,8 @@ int main(int argc, char *argv[])
     fps_string.setFont(font);
     fps_string.setCharacterSize(24);
     fps_string.setColor(sf::Color::Blue);
+
+    fft.calc();
 
     sf::Clock clock;
     clock.restart();
