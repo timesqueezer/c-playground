@@ -12,7 +12,6 @@ CoordinateSystem::CoordinateSystem(double x_scale, double y_scale, int width, in
     int border_width = 50;
     int line_width = 1;
     sf::Color color(255, 255, 255, 172);
-    double step_x_size = 500;
     double step_y_size = y_scale / 10;
     int font_size = 16;
 

@@ -170,20 +170,36 @@ void FFTView::calc() {
 
     // Generating bar graph
     int num_bars = mWidth;
-    int padding = 0;
+    //int padding = 0;
+
+    int mem_k_start = 0;
 
     for (int i = 0; i < num_bars; ++i) {
         // Frequency-width
-        int k_start = log10scale<int>(i, 0, num_bars);
-        int k_end = log10scale<int>(i+1, 0, num_bars);
-        int k_width = k_end - k_start;
+        //double k_start = mem_k_start != 0 ? mem_k_start : log10scale_reverse<double>((double)(i+1), (double)1, (double)num_bars) * max_freq;
+        //double k_end = log10scale_reverse<double>((double)(i+2), (double)1, (double)num_bars) * max_freq;
+        double k_start = x_to_freq((double)i/(double)num_bars, (double)max_freq);
+        double k_end = x_to_freq((double)(i+1)/num_bars, (double)max_freq);
+        int k_width = (int)round(k_end - k_start);
         // Bar width in px
-        int actual_bar_start = log10scale<int>(i, 0, mWidth);
-        int actual_bar_end = log10scale<int>(i+1, 0, mWidth);
-        int actual_bar_width = actual_bar_end - actual_bar_start;
+        //int actual_bar_start = log10scale_reverse<double>((double)(i+1), (double)1, (double)mWidth) * mWidth;
+        //int actual_bar_end = log10scale_reverse<double>((double)(i+2), (double)1, (double)mWidth) * mWidth;
+        double actual_bar_start = x_to_freq((double)i/num_bars, (double)mWidth);
+        double actual_bar_end = x_to_freq((double)(i+1)/num_bars, (double)mWidth);
+        int actual_bar_width = (int)round(actual_bar_end - actual_bar_start);
 
-        if (k_width < 1) {
-            printf("FUCK\n");
+        printf("i: %i, k_width: %f - %f = %i, bar(end - start) = width: %f - %f = %i\n", i, k_start, k_end, k_width, actual_bar_end, actual_bar_start, actual_bar_width);
+
+        if (k_width < 1 && mem_k_start == 0) {
+            mem_k_start = k_start;
+            continue;
+        }
+        if (k_width >= 1) {
+            mem_k_start = 0;
+        }
+
+        if (mem_k_start != 0) {
+            continue;
         }
 
         double average = 0;
@@ -194,13 +210,13 @@ void FFTView::calc() {
 
         int bar_height = (int)round(average * mHeight / max);
 
-        sf::RectangleShape bar(sf::Vector2f(actual_bar_width, bar_height));
+        sf::RectangleShape bar(sf::Vector2f((int)actual_bar_width, bar_height));
         bar.setPosition(sf::Vector2f(actual_bar_start, mHeight - bar_height));
         bar.setFillColor(sf::Color(200, 220, 255, 255));
         //bar.setFillColor(sf::Color(200, 220*(1/average), 255*(1/average), 255));
-        if (1000 - (k_start / (k_start / 1000)) < (k_width/2) ) {
+        /*if (1000 - (k_start / (k_start / 1000)) < (k_width/2) ) {
             bar.setFillColor(sf::Color(255, 0, 128, 255));
-        }
+        }*/
         if (actual_bar_width > 10) {
             bar.setOutlineThickness(-1);
             bar.setOutlineColor(sf::Color::Black);
