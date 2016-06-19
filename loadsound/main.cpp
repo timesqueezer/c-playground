@@ -241,14 +241,19 @@ void FFTView::calc() {
     }
     printf("MAX MAG: %f\n", max);*/
 
+    // Log scaling f(x, width) = 20 * 10^3(x / width)
+    // Reverse:    x(f, width) = (max / 3)*math.log10(f / 20)
+
     // Generating bar graph
     int num_bars = 1000;
     int padding = 0;
     int bar_width = (double)(mWidth / (num_bars + (padding * num_bars) ) );
-    int k_width = (int)round((double)max_freq / num_bars);
-    printf("k_width: %i, you lost %i\n", k_width, max_freq%num_bars);
+    //printf("k_width: %i, you lost %i\n", k_width, max_freq%num_bars);
 
     for (int i = 0; i < num_bars; ++i) {
+        int k_width = (int)round((double)(max_freq/3)*log10(i));
+        int actual_bar_width = (int)round((double)(mWidth / 3)*log10(i*bar_width/20));
+
         double average = 0;
         for (int k = 0; k < k_width; ++k) {
             average += mag[k + (i * k_width)];
@@ -286,8 +291,8 @@ int main(int argc, char *argv[])
         printf("Error loading file.\n"  );
     }
 
-    //FFTView fft(4096, &buffer, RES_X - 50, RES_Y - 50);
-    //fft.calc();
+    FFTView fft(4096, &buffer, RES_X - 50, RES_Y - 50);
+    fft.calc();
     WAVView wav(buffer, RES_X - 50, RES_Y - 50);
     CoordinateSystem cSystem(buffer.getSampleRate() / 2, 1.0, RES_X, RES_Y);
 
@@ -333,7 +338,7 @@ int main(int argc, char *argv[])
         window.clear();
         texture.clear();
 
-        //texture.draw(fft);
+        texture.draw(fft);
         //texture.draw(wav);
         texture.display();
 
