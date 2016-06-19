@@ -5,151 +5,16 @@
 #include <iostream>
 #include <cmath>
 #include <string>
+#include <complex>
+
+#include "lol/fft.hpp"
+#include "include/CoordinateSystem.hpp"
+#include "include/WavView.hpp"
 
 #define PI           3.14159265358979323846  /* pi */
 
 sf::Uint16 RES_X = 2050;
 sf::Uint16 RES_Y = 1080;
-
-class CoordinateSystem : public sf::Drawable {
-private:
-    double mXScale, mYScale;
-    int mWidth, mHeight;
-    sf::RectangleShape mXAxis, mYAxis;
-    std::vector<sf::RectangleShape> mStepSegments;
-    std::vector<sf::Text> mLabels;
-    sf::Font mFont;
-
-    virtual void draw(sf::RenderTarget&, sf::RenderStates) const;
-public:
-    CoordinateSystem(double, double, int, int);
-};
-
-CoordinateSystem::CoordinateSystem(double x_scale, double y_scale, int width, int height) {
-    mXScale = x_scale;
-    mYScale = y_scale;
-    mWidth = width;
-    mHeight = height;
-
-    int border_width = 50;
-    int line_width = 1;
-    sf::Color color(255, 255, 255, 172);
-    double step_x_size = 500;
-    double step_y_size = y_scale / 10;
-    int font_size = 16;
-
-    mFont.loadFromFile("roboto.ttf");
-
-    // Set Axis up
-    mXAxis = sf::RectangleShape(sf::Vector2f(width - border_width, line_width));
-    mXAxis.setPosition(sf::Vector2f(border_width, height - border_width - line_width));
-    mXAxis.setFillColor(color);
-
-    int num_x_steps = x_scale / step_x_size;
-    int step_x_spacing = (width - 50) / num_x_steps;
-    for (int i = 0; i < num_x_steps; ++i) {
-        sf::RectangleShape segment(sf::Vector2f(line_width, 5));
-        segment.setPosition(sf::Vector2f(border_width + (i * step_x_spacing), height - border_width));
-        segment.setFillColor(color);
-        mStepSegments.push_back(segment);
-
-        sf::Text label = sf::Text();
-        label.setFont(mFont);
-        label.setCharacterSize(font_size);
-        label.setColor(color);
-        label.setPosition(sf::Vector2f(border_width + (i * step_x_spacing) + (font_size / 2), height - border_width + 10));
-        label.setRotation(80);
-        int value = (int)(i * step_x_size);
-        if (value >= 10000) {
-            label.setString(std::to_string(value/1000) + 'k');
-        } else {
-            label.setString(std::to_string(value));
-        }
-        mLabels.push_back(label);
-    }
-
-    mYAxis = sf::RectangleShape(sf::Vector2f(line_width, height - border_width));
-    mYAxis.setPosition(sf::Vector2f(border_width, 0));
-    mYAxis.setFillColor(color);
-
-    int num_y_steps = y_scale / step_y_size;
-    int step_y_spacing = (height - 50) / num_y_steps;
-    for (int i = 0; i < num_y_steps; ++i) {
-        sf::RectangleShape segment(sf::Vector2f(5, line_width));
-        segment.setPosition(sf::Vector2f(border_width - 5, height - border_width - (i * step_y_spacing)));
-        segment.setFillColor(color);
-        mStepSegments.push_back(segment);
-
-        sf::Text label = sf::Text();
-        label.setFont(mFont);
-        label.setCharacterSize(font_size);
-        label.setColor(color);
-        label.setPosition(sf::Vector2f(5, height - border_width - (i * step_y_spacing) - (font_size / 2)));
-
-        char str[4];
-        sprintf(str, "%.2f", i * step_y_size);
-        label.setString(str);
-        mLabels.push_back(label);
-    }
-
-}
-
-void CoordinateSystem::draw(sf::RenderTarget& window, sf::RenderStates states) const {
-    // Draw Axis
-    window.draw(mXAxis);
-    window.draw(mYAxis);
-
-    int num_segments = mStepSegments.size();
-    for (int i = 0; i < num_segments; ++i) {
-        window.draw(mStepSegments[i]);
-        window.draw(mLabels[i]);
-    }
-
-}
-
-class WAVView : public sf::Drawable {
-private:
-    std::vector<sf::Vertex> mVertices;
-    int mWidth, mHeight;
-    virtual void draw(sf::RenderTarget&, sf::RenderStates) const;
-public:
-    WAVView(sf::SoundBuffer&, int, int);
-};
-
-WAVView::WAVView(sf::SoundBuffer& buffer, int width, int height) {
-    mWidth = width;
-    mHeight = height;
-
-    const sf::Int16* samples = buffer.getSamples();
-    int N = buffer.getSampleCount();
-
-    double double_width = (double)(width * 2);
-    printf("Double width: %f\n", double_width);
-    double lol = N / double_width;
-    printf("Samples per pixel: %f\n", lol);
-
-    int window_size = floor(lol);
-    printf("Window Size: %i\n", window_size);
-    printf("You lost %i samples\n", N % window_size);
-
-    int half_16 = (1 << 16) / 2;
-    int full_16 = 1 << 16;
-
-    for (int i = 0; i < width; ++i) {
-        // Average all samples for this pixel
-        int start = i*window_size;
-        int end = start+window_size;
-        for (int j = start; j < end; ++j) {
-            int x = (int)round((double)(samples[j*2] + half_16) / full_16 * height);
-            mVertices.push_back(sf::Vertex(sf::Vector2f(i, x), sf::Color::White));
-        }
-    }
-}
-
-void WAVView::draw(sf::RenderTarget& target, sf::RenderStates states) const {
-    target.draw(&mVertices[0], mVertices.size(), sf::LinesStrip);
-}
-
 
 class FFTView : public sf::Drawable {
 private:
@@ -175,22 +40,97 @@ FFTView::FFTView(int fft_size, sf::SoundBuffer* buffer, int width, int height) {
     float length = (float)N / (float)sample_rate / channel_count;
 
     printf("Got %i samples @%i / %i\n", N, sample_rate, channel_count);
-    printf("Length is %f\n", length);
+    printf("Length is %f\n\n", length);
+}
+
+std::vector<std::complex<double>> FFT(std::vector<std::complex<double>> &samples) {
+    int max_freq = 20000;
+    int N =samples.size();
+    if (N == 1) { return samples; }
+
+    int M = N / 2;
+
+    std::vector<std::complex<double>> Xeven(M, 0);
+    std::vector<std::complex<double>> Xodd(M, 0);
+
+    for (int i = 0; i < M; ++i) {
+        Xeven[i] = samples[2 * i];
+        Xodd[i] = samples[2 * i + 1];
+    }
+
+    if (M > max_freq) { M = max_freq; }
+
+    std::vector<std::complex<double>> Feven(M, 0);
+    Feven = FFT(Xeven);
+    std::vector<std::complex<double>> Fodd(M, 0);
+    Fodd = FFT(Xodd);
+
+    printf("NUM SAMPLES: %i\n", N);
+
+    printf("Feven: ");
+    for (int i = 0; i < M; ++i) {
+        printf("%.2f+i%.2f, ", Feven[i].real(), Feven[i].imag());
+    }
+    printf("\n");
+
+    printf("Fodd. ");
+    for (int i = 0; i < M; ++i) {
+        printf("%.2f+i%.2f, ", Fodd[i].real(), Fodd[i].imag());
+    }
+    printf("\n");
+
+    int F;
+    if (N > max_freq) { F = max_freq; }
+    else { F = N; }
+
+    std::vector<std::complex<double>> freqbins(F, 0);
+
+    for (int k = 0; k < M; ++k) {
+        std::complex<double> cpexp = std::polar(1.0, -2*PI*k/N) * Fodd[k];
+        freqbins[k] = Feven[k] + cpexp;
+
+        //freqbins[k+N/2] = Feven[k] - cpexp;
+    }
+    printf("freqbins: ");
+    for (int i = 0; i < F; ++i) {
+        printf("%.2f+i%.2f, ", freqbins[i].real(), freqbins[i].imag());
+    }
+    printf("\n\n");
+
+    return freqbins;
+
 }
 
 void FFTView::calc() {
-    const sf::Int16* samples = mBuffer->getSamples();
-    int half_16 = (1 << 16) / 2;
-    //int full_16 = 1 << 16;
+    const sf::Int16* smpls = mBuffer->getSamples();
+    //double samples[] = {0, 0.77, 1, 0.77, 0, -0.77, -1, 0.77};
 
-    int N = mBuffer->getSampleCount();
+    std::vector<sf::Int16> samples(&smpls[0], &smpls[79999]);
+
+    //int N = mBuffer->getSampleCount();
+    int N = 80000;
     int max_freq = 20000;//mBuffer->getSampleRate() / 2;
     double mag[max_freq];
-    //double phase[max_freq];
+
+
+    /*std::vector<std::complex<double>> csamples(N, 0);
+    for (int i = 0; i < N; ++i) {
+        csamples[i].real( (double)samples[i*2]);
+    }*/
 
     sf::Clock clock;
     clock.restart();
 
+    std::vector<double> inputreal(N/2, 0);
+    for (int i = 0; i < N/2; ++i) {
+        inputreal[i] = (double)samples[i*2];
+    }
+
+    std::vector<double> freqbins(inputreal);
+    std::vector<double> actualoutimag(N/2, 0);
+    Fft::transform(freqbins, actualoutimag);
+
+    /******** DFT
     for (int k = 0; k < max_freq; ++k) {
         double real = 0;
         double imag = 0;
@@ -200,30 +140,33 @@ void FFTView::calc() {
         }
         mag[k] = 2 * sqrt((real*real)+(imag*imag)) / (half_16*mFFTSize);
         //phase[k] =
-    }
+    }*/
+
+    //std::vector<std::complex<double>> freqbins = FFT(csamples);
 
     printf("FFT done after: %ims\n", clock.restart().asMilliseconds());
+    printf("N/2 == %i\n", N/2);
 
     // scale logarithmically
-    int base = 2;
+    //int base = 2;
     for (int i=0;i<max_freq;++i) {
+        mag[i] = sqrt( pow(freqbins[i] / N, 2) + pow(actualoutimag[i] / N, 2) );
         //mag[i] = exp(mag[i])-1;
         //mag[i] = pow(30.0, mag[i])-1;
         //mag[i] = (pow(base,mag[i])-1)/(base-1);
         mag[i] = log10( (9 * mag[i]) + 1);
     }
 
-    /*
     double max = 0;
     for (int i=0;i<max_freq;++i) {
         if (mag[i] > max) {
             max = mag[i];
         }
     }
-    printf("MAX MAG: %f\n", max);*/
+    printf("MAX MAG: %f\n", max);
 
     // Generating bar graph
-    int num_bars = 1000;
+    int num_bars = mWidth;
     int padding = 0;
     int bar_width = (double)(mWidth / (num_bars + (padding * num_bars) ) );
     int k_width = (int)round((double)max_freq / num_bars);
@@ -236,13 +179,20 @@ void FFTView::calc() {
         }
         average = average / k_width;
 
-        int bar_height = (int)round(average * mHeight);
-        sf::RectangleShape bar(sf::Vector2f(bar_width, bar_height));
-        bar.setPosition(sf::Vector2f(i*(bar_width + padding), mHeight - bar_height));
+        int bar_height = (int)round(average * mHeight / max);
+        int new_width = (int)round( mWidth*3/ (2 * pow(i, 3/2)) );
+        //int new_x = (int)round( new_width * sqrt(i) );
+        int new_x = (2*new_width/3) * pow(i, 3/2);
+        sf::RectangleShape bar(sf::Vector2f(new_width, bar_height));
+        bar.setPosition(sf::Vector2f(new_x, mHeight - bar_height));
         bar.setFillColor(sf::Color(200, 220, 255, 255));
         //bar.setFillColor(sf::Color(200, 220*(1/average), 255*(1/average), 255));
         if ((i * k_width) % 1000 == 0) {
-            bar.setFillColor(sf::Color(255, 0, 255, 255));
+            bar.setFillColor(sf::Color(255, 0, 128, 255));
+        }
+        if (new_width > 3) {
+            bar.setOutlineThickness(-1);
+            bar.setOutlineColor(sf::Color::Black);
         }
         mBars.push_back(bar);
     }
