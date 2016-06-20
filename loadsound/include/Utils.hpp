@@ -14,9 +14,9 @@ template<typename T> T log10scale_reverse(double x, T min, T max) {
 // Log scaling f(x, width) = 20 * 10^3(x / width)
 // Reverse:    x(f, width) = (max / 3)*math.log10(f / 20)
 double x_to_freq(double x, double width) {
-    return (width * pow(10, x)) - width;
+    return pow(10, x * log10(width));
 }
 
 double f_to_x(double f, double width) {
-    return (width / log10(width))*log10(f);
+    return (width/3) * log10(f / 20);
 }

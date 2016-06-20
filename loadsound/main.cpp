@@ -7,7 +7,6 @@
 #include <string>
 #include <complex>
 
-#include "lol/fft.hpp"
 #include "include/CoordinateSystem.hpp"
 #include "include/WavView.hpp"
 #include "include/Utils.hpp"
@@ -184,8 +183,8 @@ void FFTView::calc() {
         // Bar width in px
         //int actual_bar_start = log10scale_reverse<double>((double)(i+1), (double)1, (double)mWidth) * mWidth;
         //int actual_bar_end = log10scale_reverse<double>((double)(i+2), (double)1, (double)mWidth) * mWidth;
-        double actual_bar_start = x_to_freq((double)i/num_bars, (double)mWidth);
-        double actual_bar_end = x_to_freq((double)(i+1)/num_bars, (double)mWidth);
+        double actual_bar_start = f_to_x(k_start, (double)mWidth);
+        double actual_bar_end = f_to_x(k_end, (double)mWidth);
         int actual_bar_width = (int)round(actual_bar_end - actual_bar_start);
 
         printf("i: %i, k_width: %f - %f = %i, bar(end - start) = width: %f - %f = %i\n", i, k_start, k_end, k_width, actual_bar_end, actual_bar_start, actual_bar_width);
