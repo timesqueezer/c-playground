@@ -12,12 +12,15 @@ WARNINGS := -Wall -Wextra -pedantic -Wshadow -Wpointer-arith -Wcast-align \
             -Wwrite-strings -Wmissing-prototypes -Wmissing-declarations \
             -Wredundant-decls -Wnested-externs -Winline -Wno-long-long \
             -Wuninitialized -Wconversion -Wstrict-prototypes
-CPPFLAGS := -g -std=c++11 # $(WARNINGS)
+CPPFLAGS := -g -std=c++11# $(WARNINGS)
 
 default: build
 
 build:
 	@$(CXX) $(CPPFLAGS) -o build/main $(SRCFILES) $(LINKFLAGS)
+
+run: build
+	./build/main samples/1s1k5k.wav 4096
 
 clean:
 	-@$(RM) -r build/*

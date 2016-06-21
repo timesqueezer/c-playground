@@ -1,3 +1,5 @@
+#ifndef _UTILS_HPP
+#define _UTILS_HPP
 
 #include <cmath>
 #include <stdio.h>
@@ -21,3 +23,5 @@ double x_to_freq(double x, double width) {
 double f_to_x(double f, double width) {
     return (width/3) * log10(f / 20);
 }
+
+#endif
