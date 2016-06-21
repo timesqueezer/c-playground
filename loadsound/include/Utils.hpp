@@ -19,5 +19,5 @@ double x_to_freq(double x, double width) {
 }
 
 double f_to_x(double f, double width) {
-    return (width / log10(width))*log10(f);
+    return (width/3) * log10(f / 20);
 }
