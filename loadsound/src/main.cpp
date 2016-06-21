@@ -8,14 +8,19 @@
 #include <string>
 #include <complex>
 
-#include "include/CoordinateSystem.hpp"
-#include "include/WavView.hpp"
-#include "include/Utils.hpp"
+#include "../fft/fft.hpp"
+
+#include "../include/CoordinateSystem.hpp"
+#include "../include/WavView.hpp"
+#include "../include/Utils.hpp"
 
 #define PI           3.14159265358979323846  /* pi */
 
 sf::Uint16 RES_X = 2050;
 sf::Uint16 RES_Y = 1080;
+
+enum FFTMODE { FFTMODE_DFT, FFTMODE_RFFT, FFTMODE_FFT };
+enum GRAPHMODE { GRAPHMODE_INTENSITY, GRAPHMODE_BARS };
 
 class FFTView : public sf::Drawable {
 private:
@@ -23,17 +28,21 @@ private:
     sf::SoundBuffer* mBuffer;
     std::vector<sf::RectangleShape> mBars;
     virtual void draw(sf::RenderTarget&, sf::RenderStates) const;
+    FFTMODE mMode;
+    GRAPHMODE mGraphMode;
 
 public:
-    FFTView(int, sf::SoundBuffer*, int, int);
+    FFTView(int, sf::SoundBuffer*, int, int, FFTMODE, GRAPHMODE);
     void calc();
 };
 
-FFTView::FFTView(int fft_size, sf::SoundBuffer* buffer, int width, int height) {
+FFTView::FFTView(int fft_size, sf::SoundBuffer* buffer, int width, int height, FFTMODE mode, GRAPHMODE graph_mode) {
     mFFTSize = fft_size;
     mBuffer = buffer;
     mWidth = width;
     mHeight = height;
+    mMode = mode;
+    mGraphMode = graph_mode;
 
     int N = buffer->getSampleCount();
     int sample_rate = buffer->getSampleRate();
@@ -103,48 +112,57 @@ std::vector<std::complex<double>> FFT(std::vector<std::complex<double>> &samples
 }
 
 void FFTView::calc() {
-    const sf::Int16* samples = mBuffer->getSamples();
-    //double samples[] = {0, 0.77, 1, 0.77, 0, -0.77, -1, 0.77};
-
-    //std::vector<sf::Int16> samples(&smpls[0], &smpls[79999]);
-
-    int N = mBuffer->getSampleCount() / 2;
-    //int N = 80000;
-    int max_freq = 20000;//mBuffer->getSampleRate() / 2;
+    /*
+    samples[] = {0, 0.77, 1, 0.77, 0, -0.77, -1, 0.77};
+    int N = 8;
+    int max_freq = N;
     double mag[max_freq];
+    */
 
-
-    /*std::vector<std::complex<double>> csamples(N, 0);
-    for (int i = 0; i < N; ++i) {
-        csamples[i].real( (double)samples[i*2]);
-    }*/
+    const sf::Int16* samples = mBuffer->getSamples();
+    int N = mBuffer->getSampleCount() / 2;
+    int max_freq = 20000;
+    double mag[max_freq];
 
     sf::Clock clock;
     clock.restart();
 
-    /*std::vector<double> inputreal(N/2, 0);
-    for (int i = 0; i < N/2; ++i) {
-        inputreal[i] = (double)samples[i*2];
-    }
-
-    std::vector<double> freqbins(inputreal);
-    std::vector<double> actualoutimag(N/2, 0);
-    Fft::transform(freqbins, actualoutimag);*/
-
-    int half_16 = (1 << 8) / 2;
-
-    // DFT
-    for (int k = 0; k < max_freq; ++k) {
-        double real = 0;
-        double imag = 0;
-        for (int n = 0; n < mFFTSize; ++n) {
-            real += (samples[n*2] * cos(2*PI*k*n/N));
-            imag += (samples[n*2] * sin(2*PI*k*n/N));
+    if (mMode == FFTMODE_FFT) {
+        std::vector<double> inputreal(N, 0);
+        for (int i = 0; i < N; ++i) {
+            inputreal[i] = (double)samples[i*2];
         }
-        mag[k] = sqrt((real*real)+(imag*imag)) / (half_16*mFFTSize);
-        //phase[k] =
+
+        std::vector<double> freqbins(inputreal);
+        std::vector<double> actualoutimag(N, 0);
+        Fft::transform(freqbins, actualoutimag);
+
+    } else if (mMode == FFTMODE_RFFT) {
+        std::vector<std::complex<double>> csamples(N, 0);
+        for (int i = 0; i < N; ++i) {
+            csamples[i].real( (double)samples[i*2] );
+        }
+
+        std::vector<std::complex<double>> freqbins = FFT(csamples);
+
+    } else if (mMode == FFTMODE_DFT) {
+        int half_16 = (1 << 8) / 2;
+
+        // DFT
+        for (int k = 0; k < max_freq; ++k) {
+            double real = 0;
+            double imag = 0;
+            for (int n = 0; n < mFFTSize; ++n) {
+                real += (samples[n*2] * cos(2*PI*k*n/N));
+                imag += (samples[n*2] * sin(2*PI*k*n/N));
+            }
+            mag[k] = sqrt((real*real)+(imag*imag)) / (half_16*mFFTSize);
+            //phase[k] =
+        }
+
+    } else {
+        printf("Invalid Mode\n");
     }
-    //std::vector<std::complex<double>> freqbins = FFT(csamples);
 
     printf("FFT done after: %ims\n", clock.restart().asMilliseconds());
     printf("N/2 == %i\n", N/2);
@@ -158,6 +176,7 @@ void FFTView::calc() {
         mag[i] = log10( (9 * mag[i]) + 1);
     }
 
+    // Get maximum to normalize
     double max = 0;
     for (int i=0;i<max_freq;++i) {
         if (mag[i] > max) {
@@ -165,9 +184,6 @@ void FFTView::calc() {
         }
     }
     printf("MAX MAG: %f\n", max);
-
-    // Log scaling f(x, width) = 20 * 10^3(x / width)
-    // Reverse:    x(f, width) = (max / 3)*math.log10(f / 20)
 
     // Generating bar graph
     int num_bars = mWidth;
@@ -182,19 +198,23 @@ void FFTView::calc() {
         double k_start = mem_k_start != 0 ? mem_k_start : x_to_freq((double)i/(double)num_bars, (double)max_freq);
         double k_end = x_to_freq((double)(i+1)/num_bars, (double)max_freq);
         int k_width = (int)(floor(k_end) - floor(k_start));
-        // Bar width in px
-        //int actual_bar_start = log10scale_reverse<double>((double)(i+1), (double)1, (double)mWidth) * mWidth;
-        //int actual_bar_end = log10scale_reverse<double>((double)(i+2), (double)1, (double)mWidth) * mWidth;
 
-        /*
-        double actual_bar_start = f_to_x(k_start, (double)mWidth);
-        double actual_bar_end = f_to_x(k_end, (double)mWidth);
-        int actual_bar_width = (int)round(actual_bar_end - actual_bar_start);
-        */
+        int bar_position;
 
-        // Frequency to x-coordinate
-        int bar_position = (int)(( (double)mWidth / 3 ) * log10(k_start / 20));
+        if (mGraphMode == GRAPHMODE_BARS) {
+            // Bar width in px
+            //int actual_bar_start = log10scale_reverse<double>((double)(i+1), (double)1, (double)mWidth) * mWidth;
+            //int actual_bar_end = log10scale_reverse<double>((double)(i+2), (double)1, (double)mWidth) * mWidth;
 
+            /*
+            double actual_bar_start = f_to_x(k_start, (double)mWidth);
+            double actual_bar_end = f_to_x(k_end, (double)mWidth);
+            int actual_bar_width = (int)round(actual_bar_end - actual_bar_start);
+            */
+        } else if (mGraphMode == GRAPHMODE_INTENSITY) {
+            // Frequency to x-coordinate
+            bar_position = (int)(( (double)mWidth / 3 ) * log10(k_start / 20));
+        }
         //printf("i: %i, k_width: %f - %f = %i, bar(end - start) = width: %f - %f = %i\n", i, k_start, k_end, k_width, actual_bar_end, actual_bar_start, actual_bar_width);
 
         if (k_width < 1 && mem_k_start == 0) {
@@ -213,35 +233,38 @@ void FFTView::calc() {
         double average = 0;
         for (int k = floor(k_start); k < floor(k_end); ++k) {
             average += mag[k];
-            if (i == 1348) {
-                printf("mag[%i] = %f\n", k, mag[k]);
-            }
         }
         average = average / k_width;
 
         //int bar_height = (int)round(average * mHeight / max);
-        double bar_color = average / max;
+        double normalized_value = average / max;
 
-        //printf("i: %i, k_width: %f - %f = %i, bar position: %i, avg: %f\n", i, k_start, k_end, k_width, bar_position, bar_color);
+        //printf("i: %i, k_width: %f - %f = %i, bar position: %i, avg: %f\n", i, k_start, k_end, k_width, bar_position, normalized_value);
 
-        //sf::RectangleShape bar(sf::Vector2f((int)actual_bar_width, bar_height));
-        sf::RectangleShape bar(sf::Vector2f(1, mHeight));
-        //bar.setPosition(sf::Vector2f(actual_bar_start, mHeight - bar_height));
-        bar.setPosition(sf::Vector2f(bar_position, 0));
-        //bar.setFillColor(sf::Color(200, 220, 255, 255));
-        bar.setFillColor(sf::Color(120, 180, 255, bar_color*255));
-        //bar.setFillColor(sf::Color(200, 220*(1/average), 255*(1/average), 255));
-        /*if (1000 - (k_start / (k_start / 1000)) < (k_width/2) ) {
-            bar.setFillColor(sf::Color(255, 0, 128, 255));
-        }*/
-        /*if (actual_bar_width > 10) {
-            bar.setOutlineThickness(-1);
-            bar.setOutlineColor(sf::Color::Black);
-        }*/
+        sf::RectangleShape bar;
+
+        if (mGraphMode == GRAPHMODE_BARS) {
+            //sf::RectangleShape bar(sf::Vector2f((int)actual_bar_width, bar_height));
+            //bar.setPosition(sf::Vector2f(actual_bar_start, mHeight - bar_height));
+            //bar.setFillColor(sf::Color(200, 220, 255, 255));
+            //bar.setFillColor(sf::Color(200, 220*(1/average), 255*(1/average), 255));
+            /*if (1000 - (k_start / (k_start / 1000)) < (k_width/2) ) {
+                bar.setFillColor(sf::Color(255, 0, 128, 255));
+            }*/
+            /*if (actual_bar_width > 10) {
+                bar.setOutlineThickness(-1);
+                bar.setOutlineColor(sf::Color::Black);
+            }*/
+
+        } else if (mGraphMode == GRAPHMODE_INTENSITY) {
+            bar = sf::RectangleShape(sf::Vector2f(1, mHeight));
+            bar.setPosition(sf::Vector2f(bar_position, 0));
+            bar.setFillColor(sf::Color(120, 180, 255, normalized_value*255));
+        }
+
         mBars.push_back(bar);
     }
 
-    //printf("p(20000) = %f", (( (double)mWidth / 3 ) * log10(20000 / 20)));
 }
 
 void FFTView::draw(sf::RenderTarget& target, sf::RenderStates states) const {
@@ -266,7 +289,7 @@ int main(int argc, char *argv[])
 
     int fft_size = argc >= 3 ? atoi(argv[2]) : 128;
 
-    FFTView fft(fft_size, &buffer, RES_X - 50, RES_Y - 50);
+    FFTView fft(fft_size, &buffer, RES_X - 50, RES_Y - 50, FFTMODE_DFT, GRAPHMODE_INTENSITY);
     //WAVView wav(buffer, RES_X - 50, RES_Y - 50);
     CoordinateSystem cSystem(buffer.getSampleRate() / 2, 1.0, RES_X, RES_Y);
 
@@ -280,7 +303,8 @@ int main(int argc, char *argv[])
     }
 
     sf::Font font;
-    if (!font.loadFromFile("roboto.ttf")) {
+    if (!font.loadFromFile("/usr/share/fonts/TTF/Roboto-Regular.ttf")) {
+        printf("Please install Roboto-Regular.\n");
         return -1;
     }
 
