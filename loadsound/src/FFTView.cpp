@@ -99,6 +99,8 @@ void FFTView::calc() {
     sf::Clock clock;
     clock.restart();
 
+    double* dataMag = new double[mFFTSize];
+
     if (mMode == FFTMODE_FFT) {
         std::vector<double> inputreal(N, 0);
         for (int i = 0; i < N; ++i) {
@@ -132,12 +134,68 @@ void FFTView::calc() {
             //phase[k] =
         }
 
+    } else if (mMode == FFTMODE_FASTFFT) {
+        if ((mFFTSize & (mFFTSize - 1)) != 0 ) {
+            printf("fft size has to be a power of 2\n");
+        }
+
+        const unsigned Min = 1;
+        const unsigned Max = 20;
+
+        Loki::Factory<AbstractFFT<double>,unsigned int> gfft_factory;
+        FactoryInit<GFFTList<GFFT,Min,Max>::Result>::apply(gfft_factory);
+
+        int p = log2(mFFTSize);
+        printf("p = %i\n", p);
+
+        AbstractFFT<double>* gfft = gfft_factory.CreateObject(p);
+        double* data = new double[2 * mFFTSize];
+
+        for (int i=0; i < mFFTSize; ++i) {
+            data[2*i] = samples[2*i];
+            data[2*i+1] = 0;
+        }
+
+        gfft->fft(data);
+
+        for (int i=0; i < mFFTSize; ++i) {
+            dataMag[i] = sqrt((data[2*i] * data[2*i]) + (data[2*i+1] * data[2*i+1]));
+        }
+
+        /*for (int i=0; i<max_freq; ++i) {
+            mag[i] = i <= mFFTSize ? sqrt((data[2*i] * data[2*i]) + (data[2*i+1] * data[2*i+1])) / mFFTSize : 0;
+        }*/
+
     } else {
         printf("Invalid Mode\n");
     }
 
-    printf("FFT done after: %ims\n", clock.restart().asMilliseconds());
+    printf("FFT done after: %ius\n", clock.restart().asMicroseconds());
     printf("N/2 == %i\n", N/2);
+
+    double max = 0;
+    for (int i=0;i<mFFTSize;++i) {
+        if (dataMag[i] > max) {
+            max = dataMag[i];
+        }
+    }
+
+    double ratio = (double)mBuffer->getSampleRate() / (double)mFFTSize;
+
+    for (int i=0; i < mFFTSize; ++i) {
+        double freq = i * ratio;
+        int bar_position = (int)(( (double)mWidth / 3 ) * log10(freq / 20));
+        double normalized_value = dataMag[i] / max;
+
+        sf::RectangleShape bar;
+        bar = sf::RectangleShape(sf::Vector2f(1, mHeight));
+        bar.setPosition(sf::Vector2f(bar_position, 0));
+        bar.setFillColor(sf::Color(120, 180, 255, normalized_value*255));
+
+        mBars.push_back(bar);
+    }
+
+    /*
 
     // scale logarithmically
     //int base = 2;
@@ -183,6 +241,7 @@ void FFTView::calc() {
             double actual_bar_end = f_to_x(k_end, (double)mWidth);
             int actual_bar_width = (int)round(actual_bar_end - actual_bar_start);
             */
+        /*
         } else if (mGraphMode == GRAPHMODE_INTENSITY) {
             // Frequency to x-coordinate
             bar_position = (int)(( (double)mWidth / 3 ) * log10(k_start / 20));
@@ -227,7 +286,7 @@ void FFTView::calc() {
                 bar.setOutlineThickness(-1);
                 bar.setOutlineColor(sf::Color::Black);
             }*/
-
+/*
         } else if (mGraphMode == GRAPHMODE_INTENSITY) {
             bar = sf::RectangleShape(sf::Vector2f(1, mHeight));
             bar.setPosition(sf::Vector2f(bar_position, 0));
@@ -235,7 +294,7 @@ void FFTView::calc() {
         }
 
         mBars.push_back(bar);
-    }
+    }*/
 
 }
 

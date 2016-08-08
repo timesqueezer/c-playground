@@ -12,6 +12,9 @@
 sf::Uint16 RES_X = 2050;
 sf::Uint16 RES_Y = 1080;
 
+//sf::Uint16 RES_X = 2560;
+//sf::Uint16 RES_Y = 1440;
+
 int main(int argc, char *argv[])
 {
     if (argc <= 1) {
@@ -26,7 +29,7 @@ int main(int argc, char *argv[])
 
     int fft_size = argc >= 3 ? atoi(argv[2]) : 128;
 
-    FFTView fft(fft_size, &buffer, RES_X - 50, RES_Y - 50, FFTMODE_DFT, GRAPHMODE_INTENSITY);
+    FFTView fft(fft_size, &buffer, RES_X - 50, RES_Y - 50, FFTMODE_FASTFFT, GRAPHMODE_INTENSITY);
     //WAVView wav(buffer, RES_X - 50, RES_Y - 50);
     CoordinateSystem cSystem(buffer.getSampleRate() / 2, 1.0, RES_X, RES_Y);
 
