@@ -31,7 +31,7 @@ WAVView::WAVView(sf::SoundBuffer& buffer, int width, int height) {
     }
 }
 
-void WAVView::draw(sf::RenderTarget& target, sf::RenderStates states) const {
+void WAVView::draw(sf::RenderTarget& target) const {
     target.draw(&mVertices[0], mVertices.size(), sf::LinesStrip);
 }
 

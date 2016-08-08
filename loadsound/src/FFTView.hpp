@@ -24,8 +24,12 @@ private:
     double mMax;
     int mMaxFreq;
 
+    Loki::Factory<AbstractFFT<double>, unsigned int> mGfftFactory;
+    AbstractFFT<double>* mGfft;
+
 public:
     FFTView(int, sf::SoundBuffer*, int, int, FFTMODE, GRAPHMODE);
+    void setFFTSize(int);
     void setDimensions(int, int);
     void render();
     void calc();

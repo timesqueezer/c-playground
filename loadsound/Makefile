@@ -1,6 +1,6 @@
 .PHONY: build clean
 
-PRJDIRS := src include fft fastfft
+PRJDIRS := src include fastfft
 
 SRCFILES := $(shell find $(PRJDIRS) -type f -name "*.cpp")
 HDRFILES := $(shell find $(PRJDIRS) -type f -name "*.hpp")

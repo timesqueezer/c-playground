@@ -14,7 +14,7 @@ private:
     std::vector<sf::Text> mLabels;
     sf::Font mFont;
 
-    virtual void draw(sf::RenderTarget&, sf::RenderStates) const;
+    void draw(sf::RenderTarget&, sf::RenderStates) const;
 public:
     CoordinateSystem(double, double, int, int, std::string);
     void setDimensions(int, int);
