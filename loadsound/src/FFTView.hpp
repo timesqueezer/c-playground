@@ -1,12 +1,15 @@
 #ifndef _FFTVIEW_HPP
 #define _FFTVIEW_HPP
 
+#include <iostream>
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 
+#include "../fastfft/FastFFT.hpp"
+
 #define PI 3.14159265358979323846264338327950288419716939937510
 
-enum FFTMODE { FFTMODE_DFT, FFTMODE_RFFT, FFTMODE_FFT };
+enum FFTMODE { FFTMODE_DFT, FFTMODE_RFFT, FFTMODE_FFT, FFTMODE_FASTFFT };
 enum GRAPHMODE { GRAPHMODE_INTENSITY, GRAPHMODE_BARS };
 
 class FFTView : public sf::Drawable {

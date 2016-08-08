@@ -12,6 +12,9 @@
 sf::Uint16 RES_X = 1280;
 sf::Uint16 RES_Y = 720;
 
+//sf::Uint16 RES_X = 2560;
+//sf::Uint16 RES_Y = 1440;
+
 int main(int argc, char *argv[])
 {
     if (argc <= 1) {
