@@ -43,6 +43,9 @@ void FFTView::setFFTSize(int fftsize) {
     int p = log2(fftsize);
     printf("p = %i, fftsize = %i\n", p, fftsize);
     mGfft = mGfftFactory.CreateObject(p);
+    mFFTSize = fftsize;
+    calc();
+    render();
 }
 
 void FFTView::setDimensions(int width, int height) {
@@ -53,6 +56,10 @@ void FFTView::setDimensions(int width, int height) {
 
 void FFTView::calc() {
     const sf::Int16* samples = mBuffer->getSamples();
+    int N = mBuffer->getSampleCount();
+
+    int half_16 = (1 << 16) / 2;
+
     mMaxFreq = 20000;
 
     sf::Clock clock;
@@ -60,8 +67,6 @@ void FFTView::calc() {
 
     if (mMode == FFTMODE_DFT) {
         mMag = new double[mMaxFreq];
-
-        int half_16 = (1 << 8) / 2;
         int N = mBuffer->getSampleCount() / 2;
 
         // DFT
@@ -88,7 +93,7 @@ void FFTView::calc() {
         mGfft->fft(data);
 
         for (int i=0; i < mFFTSize; ++i) {
-            mMag[i] = sqrt((data[2*i] * data[2*i]) + (data[2*i+1] * data[2*i+1]));
+            mMag[i] = sqrt((data[2*i] * data[2*i]) + (data[2*i+1] * data[2*i+1])) / (mFFTSize * half_16);
         }
 
     } else {
@@ -97,12 +102,12 @@ void FFTView::calc() {
 
     printf("FFT done after: %ius\n", (int)clock.restart().asMicroseconds());
 
-    mMax = 0;
-    for (int i=0;i<mFFTSize;++i) {
+    mMax = 1;
+    /*for (int i=0;i<mFFTSize;++i) {
         if (mMag[i] > mMax) {
             mMax = mMag[i];
         }
-    }
+    }*/
 
     printf("Max value = %f.2\n", mMax);
 
@@ -135,4 +140,8 @@ void FFTView::draw(sf::RenderTarget& target, sf::RenderStates states) const {
     for (int i = 0; i < num_bars; ++i) {
         target.draw(mBars[i], states);
     }
-};
+}
+
+int FFTView::getFFTSize() const {
+    return mFFTSize;
+}

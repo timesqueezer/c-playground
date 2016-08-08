@@ -8,6 +8,8 @@
 #include "CoordinateSystem.hpp"
 #include "WavView.hpp"
 #include "FFTView.hpp"
+#include "Controls.hpp"
+#include "ControlElement.hpp"
 
 sf::Uint16 RES_X = 2050;
 sf::Uint16 RES_Y = 1080;
@@ -36,16 +38,27 @@ int main(int argc, char *argv[])
     //FFTMODE fft_mode = FFTMODE_DFT;
     FFTMODE fft_mode = FFTMODE_FASTFFT;
 
-    FFTView fft(fft_size, &buffer, RES_X - 50, RES_Y - 50, fft_mode, graph_mode);
+    FFTView fft(fft_size, &buffer, RES_X - 50, RES_Y - 200, fft_mode, graph_mode);
     //WAVView wav(buffer, RES_X - 50, RES_Y - 50);
-    CoordinateSystem cSystem(buffer.getSampleRate() / 2, 1.0, RES_X, RES_Y, fontPath);
+    CoordinateSystem cSystem(buffer.getSampleRate() / 2, 1.0, RES_X, RES_Y - 150, fontPath);
+    Controls controls(RES_X, 150, &fft);
+    sf::String s("FFT Size");
+    ControlElement fftSizeSwitchButton(200, 50, 50, RES_Y - 116, TYPE_BUTTON, s);
+    controls.addElement(&fftSizeSwitchButton);
 
     sf::ContextSettings settings;
     settings.antialiasingLevel = 2;
 
     sf::RenderWindow window(sf::VideoMode(RES_X, RES_Y), "HI", sf::Style::Default, settings);
-    sf::RenderTexture texture;
-    if (!texture.create(RES_X - 50, RES_Y - 50)) {
+    sf::RenderTexture fftTexture;
+    if (!fftTexture.create(RES_X - 50, RES_Y - 150)) {
+        printf("Failed to create fft-texture.\n");
+        return -1;
+    }
+
+    sf::RenderTexture controlsTexture;
+    if (!controlsTexture.create(RES_X, 150)) {
+        printf("Failed to create controls-texture.\n");
         return -1;
     }
 
@@ -55,18 +68,37 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+
+    // FPS STRING
     sf::Text fps_string;
     fps_string.setFont(font);
-    fps_string.setCharacterSize(24);
-    fps_string.setColor(sf::Color::Blue);
+    fps_string.setCharacterSize(22);
+    fps_string.setColor(sf::Color::White);
+    fps_string.setPosition(250, RES_Y - 116);
+
+    // FFT-SIZE STRING
+    sf::Text fft_string;
+    fps_string.setFont(font);
+    fps_string.setCharacterSize(22);
+    fps_string.setColor(sf::Color::White);
+    fps_string.setPosition(250, RES_Y - 66);
+    fps_string.setString(std::to_string(fft.getFFTSize()));
 
     fft.calc();
     fft.render();
+    fftTexture.clear();
+
+    fftTexture.draw(fft);
+    //fftTexture.draw(wav);
+    fftTexture.display();
+
 
     cSystem.render();
 
     sf::Clock clock;
     clock.restart();
+
+    bool paused = false;
 
     while (window.isOpen())
     {
@@ -89,9 +121,22 @@ int main(int argc, char *argv[])
                     cSystem.setDimensions(event.size.width, event.size.height);
                     fft.setDimensions(event.size.width-50, event.size.height-50);
 
+                case sf::Event::LostFocus:
+                    paused = true;
+
+                case sf::Event::GainedFocus:
+                    paused = false;
+
                 default:
                     break;
             }
+
+            controls.handleEvent(event);
+        }
+
+        if (paused) {
+            sf::sleep(sf::seconds(0.1f));
+            continue;
         }
 
         sf::Time elapsed = clock.restart();
@@ -103,18 +148,15 @@ int main(int argc, char *argv[])
         }
 
         window.clear();
-        texture.clear();
 
-        texture.draw(fft);
-        //texture.draw(wav);
-        texture.display();
-
-        sf::Sprite inner(texture.getTexture());
+        sf::Sprite inner(fftTexture.getTexture());
         inner.setPosition(sf::Vector2f(50, 0));
         window.draw(inner);
 
         window.draw(cSystem);
+        window.draw(controls);
         window.draw(fps_string);
+        window.draw(fft_string);
         window.display();
     }
 

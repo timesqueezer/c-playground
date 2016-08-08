@@ -33,6 +33,7 @@ public:
     void setDimensions(int, int);
     void render();
     void calc();
+    int getFFTSize() const;
 };
 
 #endif
