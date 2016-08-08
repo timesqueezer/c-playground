@@ -8,6 +8,9 @@ CoordinateSystem::CoordinateSystem(double x_scale, double y_scale, int width, in
     mYScale = y_scale;
     mWidth = width;
     mHeight = height;
+    if (!mFont.loadFromFile(font_path)) {
+        printf("Please install font.\n");
+    }
 }
 
 
@@ -60,7 +63,7 @@ void CoordinateSystem::render() {
         label.setCharacterSize(font_size);
         label.setColor(color);
         label.setPosition(sf::Vector2f(segment_positions[i] + (font_size / 2), mHeight - border_width + 10));
-        label.setRotation(80);
+        label.setRotation(60);
         //int value = (int)(i * 1000);
         int value = frequency_positions[i];
         if (value >= 10000) {

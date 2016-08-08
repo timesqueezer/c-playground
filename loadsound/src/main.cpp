@@ -9,8 +9,8 @@
 #include "WavView.hpp"
 #include "FFTView.hpp"
 
-sf::Uint16 RES_X = 1280;
-sf::Uint16 RES_Y = 720;
+sf::Uint16 RES_X = 2050;
+sf::Uint16 RES_Y = 1080;
 
 //sf::Uint16 RES_X = 2560;
 //sf::Uint16 RES_Y = 1440;
@@ -31,9 +31,10 @@ int main(int argc, char *argv[])
     std::string fontPath = "/usr/share/fonts/TTF/InputSansCondensed-Regular.ttf";
 
     int fft_size = argc >= 3 ? atoi(argv[2]) : 128;
-    GRAPHMODE graph_mode = GRAPHMODE_BARS;
-    //GRAPHMODE graph_mode = GRAPHMODE_INTENSITY;
-    FFTMODE fft_mode = FFTMODE_DFT;
+    //GRAPHMODE graph_mode = GRAPHMODE_BARS;
+    GRAPHMODE graph_mode = GRAPHMODE_INTENSITY;
+    //FFTMODE fft_mode = FFTMODE_DFT;
+    FFTMODE fft_mode = FFTMODE_FASTFFT;
 
     FFTView fft(fft_size, &buffer, RES_X - 50, RES_Y - 50, fft_mode, graph_mode);
     //WAVView wav(buffer, RES_X - 50, RES_Y - 50);
@@ -50,7 +51,7 @@ int main(int argc, char *argv[])
 
     sf::Font font;
     if (!font.loadFromFile(fontPath)) {
-        printf("Please install Roboto-Regular.\n");
+        printf("Please install font.\n");
         return -1;
     }
 
@@ -86,7 +87,7 @@ int main(int argc, char *argv[])
                 case sf::Event::Resized:
                     printf("new dimensions: %ix%i\n", event.size.width, event.size.height);
                     cSystem.setDimensions(event.size.width, event.size.height);
-                    fft.setDimensions(event.size.width, event.size.height);
+                    fft.setDimensions(event.size.width-50, event.size.height-50);
 
                 default:
                     break;

@@ -31,101 +31,17 @@ void FFTView::setDimensions(int width, int height) {
     this->render();
 }
 
-std::vector<std::complex<double>> FFT(std::vector<std::complex<double>> &samples) {
-    int mMaxFreq = 20000;
-    int N =samples.size();
-    if (N == 1) { return samples; }
-
-    int M = N / 2;
-
-    std::vector<std::complex<double>> Xeven(M, 0);
-    std::vector<std::complex<double>> Xodd(M, 0);
-
-    for (int i = 0; i < M; ++i) {
-        Xeven[i] = samples[2 * i];
-        Xodd[i] = samples[2 * i + 1];
-    }
-
-    if (M > mMaxFreq) { M = mMaxFreq; }
-
-    std::vector<std::complex<double>> Feven(M, 0);
-    Feven = FFT(Xeven);
-    std::vector<std::complex<double>> Fodd(M, 0);
-    Fodd = FFT(Xodd);
-
-    printf("NUM SAMPLES: %i\n", N);
-
-    printf("Feven: ");
-    for (int i = 0; i < M; ++i) {
-        printf("%.2f+i%.2f, ", Feven[i].real(), Feven[i].imag());
-    }
-    printf("\n");
-
-    printf("Fodd. ");
-    for (int i = 0; i < M; ++i) {
-        printf("%.2f+i%.2f, ", Fodd[i].real(), Fodd[i].imag());
-    }
-    printf("\n");
-
-    int F;
-    if (N > mMaxFreq) { F = mMaxFreq; }
-    else { F = N; }
-
-    std::vector<std::complex<double>> freqbins(F, 0);
-
-    for (int k = 0; k < M; ++k) {
-        std::complex<double> cpexp = std::polar(1.0, -2*PI*k/N) * Fodd[k];
-        freqbins[k] = Feven[k] + cpexp;
-
-        //freqbins[k+N/2] = Feven[k] - cpexp;
-    }
-    printf("freqbins: ");
-    for (int i = 0; i < F; ++i) {
-        printf("%.2f+i%.2f, ", freqbins[i].real(), freqbins[i].imag());
-    }
-    printf("\n\n");
-
-    return freqbins;
-
-}
-
 void FFTView::calc() {
-    /*
-    samples[] = {0, 0.77, 1, 0.77, 0, -0.77, -1, 0.77};
-    int N = 8;
-    int mMaxFreq = N;
-    double mag[mMaxFreq];
-    */
-
     const sf::Int16* samples = mBuffer->getSamples();
     int N = mBuffer->getSampleCount() / 2;
     mMaxFreq = 20000;
-    mMag = new double[mMaxFreq];
 
     sf::Clock clock;
     clock.restart();
 
-    double* dataMag = new double[mFFTSize];
+    if (mMode == FFTMODE_DFT) {
+        mMag = new double[mMaxFreq];
 
-    if (mMode == FFTMODE_FFT) {
-        std::vector<double> inputreal(N, 0);
-        for (int i = 0; i < N; ++i) {
-            inputreal[i] = (double)samples[i*2];
-        }
-
-        std::vector<double> freqbins(inputreal);
-        std::vector<double> actualoutimag(N, 0);
-        Fft::transform(freqbins, actualoutimag);
-
-    } else if (mMode == FFTMODE_RFFT) {
-        std::vector<std::complex<double>> csamples(N, 0);
-        for (int i = 0; i < N; ++i) {
-            csamples[i].real( (double)samples[i*2] );
-        }
-
-        std::vector<std::complex<double>> freqbins = FFT(csamples);
-
-    } else if (mMode == FFTMODE_DFT) {
         int half_16 = (1 << 8) / 2;
 
         // DFT
@@ -141,6 +57,8 @@ void FFTView::calc() {
         }
 
     } else if (mMode == FFTMODE_FASTFFT) {
+        mMag = new double[mFFTSize];
+
         if ((mFFTSize & (mFFTSize - 1)) != 0 ) {
             printf("fft size has to be a power of 2\n");
         }
@@ -165,7 +83,7 @@ void FFTView::calc() {
         gfft->fft(data);
 
         for (int i=0; i < mFFTSize; ++i) {
-            dataMag[i] = sqrt((data[2*i] * data[2*i]) + (data[2*i+1] * data[2*i+1]));
+            mMag[i] = sqrt((data[2*i] * data[2*i]) + (data[2*i+1] * data[2*i+1]));
         }
 
         /*for (int i=0; i<max_freq; ++i) {
@@ -177,21 +95,26 @@ void FFTView::calc() {
     }
 
     printf("FFT done after: %ius\n", clock.restart().asMicroseconds());
-    printf("N/2 == %i\n", N/2);
 
-    double max = 0;
+    mMax = 0;
     for (int i=0;i<mFFTSize;++i) {
-        if (dataMag[i] > max) {
-            max = dataMag[i];
+        if (mMag[i] > mMax) {
+            mMax = mMag[i];
         }
     }
+
+}
+
+ void FFTView::render() {
+
+    mBars.clear();
 
     double ratio = (double)mBuffer->getSampleRate() / (double)mFFTSize;
 
     for (int i=0; i < mFFTSize; ++i) {
         double freq = i * ratio;
         int bar_position = (int)(( (double)mWidth / 3 ) * log10(freq / 20));
-        double normalized_value = dataMag[i] / max;
+        double normalized_value = mMag[i] / mMax;
 
         sf::RectangleShape bar;
         bar = sf::RectangleShape(sf::Vector2f(1, mHeight));
@@ -201,31 +124,7 @@ void FFTView::calc() {
         mBars.push_back(bar);
     }
 
-    /*
-
-    // scale logarithmically
-    //int base = 2;
-    for (int i=0;i<mMaxFreq;++i) {
-        // abs(x)
-        //mag[i] = sqrt( pow(freqbins[i] / N, 2) + pow(actualoutimag[i] / N, 2) );
-
-        mMag[i] = log10( (9 * mMag[i]) + 1);
-    }
-
-    // Get maximum to normalize
-    double max = 0;
-    for (int i=0;i<mMaxFreq;++i) {
-        if (mMag[i] > max) {
-            max = mMag[i];
-        }
-    }
-    printf("MAX MAG: %f\n", max);
-
-}
-
- void FFTView::render() {
-
-    // Generating bar graph
+    /*// Generating bar graph
     int num_bars = mWidth;
     //int padding = 0;
 
@@ -242,7 +141,7 @@ void FFTView::calc() {
         int bar_position;
         int bar_width;
 
-        if (mGraphMode == GRAPHMODE_BARS) {
+        if (mGraphMode == GRAPHMODE_BARS) {*/
             // Bar width in px
             //int actual_bar_start = log10scale_reverse<double>((double)(i+1), (double)1, (double)mWidth) * mWidth;
             //int actual_bar_end = log10scale_reverse<double>((double)(i+2), (double)1, (double)mWidth) * mWidth;
@@ -316,7 +215,7 @@ void FFTView::calc() {
  }
 
 void FFTView::draw(sf::RenderTarget& target, sf::RenderStates states) const {
-    target.clear(sf::Color(30, 30, 30, 255));
+    target.clear(sf::Color(20, 20, 20, 255));
     int num_bars = mBars.size();
     for (int i = 0; i < num_bars; ++i) {
         target.draw(mBars[i], states);
