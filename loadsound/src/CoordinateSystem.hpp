@@ -3,6 +3,7 @@
 
 #include <SFML/Graphics.hpp>
 #include <cstdlib>
+#include <string>
 
 class CoordinateSystem : public sf::Drawable {
 private:
@@ -15,7 +16,9 @@ private:
 
     virtual void draw(sf::RenderTarget&, sf::RenderStates) const;
 public:
-    CoordinateSystem(double, double, int, int);
+    CoordinateSystem(double, double, int, int, std::string);
+    void setDimensions(int, int);
+    void render();
 };
 
 #endif

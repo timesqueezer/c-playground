@@ -9,8 +9,8 @@
 #include "WavView.hpp"
 #include "FFTView.hpp"
 
-sf::Uint16 RES_X = 2050;
-sf::Uint16 RES_Y = 1080;
+sf::Uint16 RES_X = 1280;
+sf::Uint16 RES_Y = 720;
 
 int main(int argc, char *argv[])
 {
@@ -24,11 +24,17 @@ int main(int argc, char *argv[])
         printf("Error loading file.\n");
     }
 
-    int fft_size = argc >= 3 ? atoi(argv[2]) : 128;
+    //char* fontPath = "/usr/share/fonts/TTF/Roboto-Regular.ttf";
+    std::string fontPath = "/usr/share/fonts/TTF/InputSansCondensed-Regular.ttf";
 
-    FFTView fft(fft_size, &buffer, RES_X - 50, RES_Y - 50, FFTMODE_DFT, GRAPHMODE_INTENSITY);
+    int fft_size = argc >= 3 ? atoi(argv[2]) : 128;
+    GRAPHMODE graph_mode = GRAPHMODE_BARS;
+    //GRAPHMODE graph_mode = GRAPHMODE_INTENSITY;
+    FFTMODE fft_mode = FFTMODE_DFT;
+
+    FFTView fft(fft_size, &buffer, RES_X - 50, RES_Y - 50, fft_mode, graph_mode);
     //WAVView wav(buffer, RES_X - 50, RES_Y - 50);
-    CoordinateSystem cSystem(buffer.getSampleRate() / 2, 1.0, RES_X, RES_Y);
+    CoordinateSystem cSystem(buffer.getSampleRate() / 2, 1.0, RES_X, RES_Y, fontPath);
 
     sf::ContextSettings settings;
     settings.antialiasingLevel = 2;
@@ -40,7 +46,7 @@ int main(int argc, char *argv[])
     }
 
     sf::Font font;
-    if (!font.loadFromFile("/usr/share/fonts/TTF/Roboto-Regular.ttf")) {
+    if (!font.loadFromFile(fontPath)) {
         printf("Please install Roboto-Regular.\n");
         return -1;
     }
@@ -51,6 +57,9 @@ int main(int argc, char *argv[])
     fps_string.setColor(sf::Color::Blue);
 
     fft.calc();
+    fft.render();
+
+    cSystem.render();
 
     sf::Clock clock;
     clock.restart();
@@ -60,8 +69,25 @@ int main(int argc, char *argv[])
         sf::Event event;
         while (window.pollEvent(event))
         {
-            if (event.type == sf::Event::Closed)
-                window.close();
+            switch (event.type) {
+                case sf::Event::Closed:
+                    window.close();
+                    break;
+
+                case sf::Event::KeyPressed:
+                    if (event.key.code == sf::Keyboard::Escape) {
+                        window.close();
+                    }
+                    break;
+
+                case sf::Event::Resized:
+                    printf("new dimensions: %ix%i\n", event.size.width, event.size.height);
+                    cSystem.setDimensions(event.size.width, event.size.height);
+                    fft.setDimensions(event.size.width, event.size.height);
+
+                default:
+                    break;
+            }
         }
 
         sf::Time elapsed = clock.restart();

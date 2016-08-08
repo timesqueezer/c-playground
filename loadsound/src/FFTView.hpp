@@ -17,9 +17,14 @@ private:
     virtual void draw(sf::RenderTarget&, sf::RenderStates) const;
     FFTMODE mMode;
     GRAPHMODE mGraphMode;
+    double* mMag;
+    double mMax;
+    int mMaxFreq;
 
 public:
     FFTView(int, sf::SoundBuffer*, int, int, FFTMODE, GRAPHMODE);
+    void setDimensions(int, int);
+    void render();
     void calc();
 };
 
