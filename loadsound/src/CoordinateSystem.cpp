@@ -3,7 +3,13 @@
 
 #include "CoordinateSystem.hpp"
 
+CoordinateSystem::CoordinateSystem() {}
+
 CoordinateSystem::CoordinateSystem(double x_scale, double y_scale, int width, int height, std::string font_path) {
+    this->create(x_scale, y_scale, width, height, font_path);
+}
+
+void CoordinateSystem::create(double x_scale, double y_scale, int width, int height, std::string font_path) {
     mXScale = x_scale;
     mYScale = y_scale;
     mWidth = width;
@@ -13,7 +19,6 @@ CoordinateSystem::CoordinateSystem(double x_scale, double y_scale, int width, in
     }
 }
 
-
 void CoordinateSystem::setDimensions(int width, int height) {
     mWidth = width;
     mHeight = height;
@@ -21,6 +26,9 @@ void CoordinateSystem::setDimensions(int width, int height) {
 }
 
 void CoordinateSystem::render() {
+
+    mStepSegments.clear();
+    mLabels.clear();
 
     int border_width = 50;
     int line_width = 1;
@@ -42,7 +50,7 @@ void CoordinateSystem::render() {
 
     for (int i = 0; i < 10; ++i) {
         // x(frequency_positions[i], mWidth)
-        segment_positions[i] = (int) ((double)(mWidth - border_width) / 3) * log10((double)frequency_positions[i] / 20);
+        segment_positions[i] = (int) ((double)(mWidth - border_width) / 3) * log10((double)frequency_positions[i] / 20) + 1;
         segment_positions[i] += border_width;
     }
 
@@ -61,7 +69,7 @@ void CoordinateSystem::render() {
         sf::Text label = sf::Text();
         label.setFont(mFont);
         label.setCharacterSize(font_size);
-        label.setColor(color);
+        label.setFillColor(color);
         label.setPosition(sf::Vector2f(segment_positions[i] + (font_size / 2), mHeight - border_width + 10));
         label.setRotation(60);
         //int value = (int)(i * 1000);
@@ -89,7 +97,7 @@ void CoordinateSystem::render() {
         sf::Text label = sf::Text();
         label.setFont(mFont);
         label.setCharacterSize(font_size);
-        label.setColor(color);
+        label.setFillColor(color);
         label.setPosition(sf::Vector2f(5, mHeight - border_width - (i * step_y_spacing) - (font_size / 2)));
 
         char str[4];

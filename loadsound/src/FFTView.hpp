@@ -28,7 +28,9 @@ private:
     AbstractFFT<double>* mGfft;
 
 public:
+    FFTView();
     FFTView(int, sf::SoundBuffer*, int, int, FFTMODE, GRAPHMODE);
+    void create(int, sf::SoundBuffer*, int, int, FFTMODE, GRAPHMODE);
     void setFFTSize(int);
     void setDimensions(int, int);
     void render();

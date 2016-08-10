@@ -7,7 +7,13 @@
 #include "FFTView.hpp"
 #include "../include/Utils.hpp"
 
+FFTView::FFTView() {}
+
 FFTView::FFTView(int fft_size, sf::SoundBuffer* buffer, int width, int height, FFTMODE mode, GRAPHMODE graph_mode) {
+    this->create(fft_size, buffer, width, height, mode, graph_mode);
+}
+
+void FFTView::create(int fft_size, sf::SoundBuffer* buffer, int width, int height, FFTMODE mode, GRAPHMODE graph_mode) {
     mFFTSize = fft_size;
     mBuffer = buffer;
     mWidth = width;

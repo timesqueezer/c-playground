@@ -5,7 +5,7 @@ PRJDIRS := src include fastfft
 SRCFILES := $(shell find $(PRJDIRS) -type f -name "*.cpp")
 HDRFILES := $(shell find $(PRJDIRS) -type f -name "*.hpp")
 
-LIBS = sfml-system sfml-window sfml-graphics sfml-audio
+LIBS = sfml-system sfml-window sfml-graphics sfml-audio sfgui
 LINKFLAGS = $(addprefix -l, $(LIBS))
 
 WARNINGS := -Wall -Wextra

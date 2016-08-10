@@ -7,15 +7,13 @@ using namespace std;
 
 int main()
 {
-    unsigned long nn = 1;
-    unsigned long n = nn<<10;
+    int x = 22;
+    int* a = &x;
 
-    cout << nn << endl;
-    cout << n << endl;
-    cout << "char " << sizeof(char) * 8 << endl;
-    cout << "long " << sizeof(long) * 8 << endl;
-    cout << "int " << sizeof(int) * 8 << endl;
-    cout << "unsigned long " << sizeof(unsigned long long) * 8 << endl;
+    cout << x << endl;
+    cout << a << endl;
+    cout << a+0x10 << endl;
+    cout << *(a+0x10) << endl;
 
     return 0;
 }
