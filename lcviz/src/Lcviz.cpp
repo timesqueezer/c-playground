@@ -14,8 +14,10 @@ Lcviz::Lcviz(int argc, char** argv) {
         printf("Please install font.\n");
     }
 
+    mPaused = false;
+
     // FPS STRING
-    sf::Text mFpsString;
+    //sf::Text mFpsString;
     mFpsString.setFont(mFont);
     mFpsString.setCharacterSize(22);
     mFpsString.setFillColor(sf::Color::White);
@@ -27,6 +29,7 @@ Lcviz::Lcviz(int argc, char** argv) {
     settings.antialiasingLevel = 2;
 
     mWindow.create(sf::VideoMode(RES_X, RES_Y), "Logic Circuit visualizer", sf::Style::Default, settings);
+    mWindow.setFramerateLimit(60);
     //mWindow.resetGLStates();
 
 }
@@ -40,8 +43,8 @@ void Lcviz::loop() {
 
     printf("Current Window size is %i x %i\n", mWindow.getSize().x, mWindow.getSize().y);
 
-    sf::RectangleShape testShape(sf::Vector2f(RES_X, 2));
-    testShape.setPosition(sf::Vector2f((RES_X/2) - 5, (RES_Y/2) - 5 ));
+    sf::RectangleShape testShape(sf::Vector2f(100, 200));
+    testShape.setPosition(sf::Vector2f(RES_X/2, RES_Y/2));
 
     while (mWindow.isOpen()) {
         sf::Event event;
@@ -67,7 +70,7 @@ void Lcviz::loop() {
                     testShape.setPosition(sf::Vector2f((event.size.width/2) - 5, (event.size.height/2) - 5 ));*/
 
                 case sf::Event::LostFocus:
-                printf("Paused game\n");
+                    printf("Paused game\n");
                     mPaused = true;
                     break;
 
@@ -89,16 +92,17 @@ void Lcviz::loop() {
         sf::Time elapsed = mClock.restart();
         //sf::String mseconds(elapsed.asMilliseconds());
         if (elapsed.asMilliseconds() > 0) {
-            mFpsString.setString(std::to_string(1000/elapsed.asMilliseconds()));
+            mFpsString.setString(std::to_string((int)round(1000/elapsed.asMilliseconds())));
         } else {
             mFpsString.setString("0");
         }
+        //printf("%.1f\n", round(1000/elapsed.asMilliseconds()));
 
-        mWindow.clear();
+        mWindow.clear(sf::Color::Black);
 
         //mWindow.draw(mCSystem);
         mWindow.draw(mFpsString);
-        mWindow.draw(testShape);
+        //mWindow.draw(testShape);
         mWindow.display();
 
     }
