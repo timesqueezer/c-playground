@@ -58,13 +58,13 @@ Analyzer::Analyzer(int argc, char** argv) {
     mWindow.create(sf::VideoMode(RES_X, RES_Y), "Audio Analyzer", sf::Style::Default, settings);
     mWindow.resetGLStates();
 
-    mGuiWindow = sfg::Window::Create();
-    auto box = sfg::Box::Create( sfg::Box::Orientation::VERTICAL, 5.f );
-    mFFTButton = sfg::Button::Create( "Click me" );
-    box->Pack( mFFTButton );
-    mFFTButton->GetSignal( sfg::Widget::OnLeftClick ).Connect( std::bind( &Analyzer::FFTSizeToggleCallback, this ) );
+    //mGuiWindow = sfg::Window::Create();
+    //auto box = sfg::Box::Create( sfg::Box::Orientation::VERTICAL, 5.f );
+    //mFFTButton = sfg::Button::Create( "Click me" );
+    //box->Pack( mFFTButton );
+    //mFFTButton->GetSignal( sfg::Widget::OnLeftClick ).Connect( std::bind( &Analyzer::FFTSizeToggleCallback, this ) );
 
-    mGuiWindow->Add( box );
+    //mGuiWindow->Add( box );
 
     // RENDERTEXTURES
     if (!mFFTTexture.create(RES_X - 50, RES_Y - 200)) {

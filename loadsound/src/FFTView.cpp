@@ -54,6 +54,10 @@ void FFTView::setFFTSize(int fftsize) {
     render();
 }
 
+void FFTView::setBuffer(sf::SoundBuffer* buffer) {
+    mBuffer = buffer;
+}
+
 void FFTView::setDimensions(int width, int height) {
     mWidth = width;
     mHeight = height;
